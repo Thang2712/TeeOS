@@ -13,7 +13,7 @@
     struct GateDescriptor
     {
         uint16_t handlerAddressLowBits;             // Lower 16 bits of the handler function address
-        uint16_t gdt_codeSegmentSelector;           // The Code Segment selector from GDT (usually 0x08)
+        uint16_t gdt_codeSegmentSelector;           // The Code Segment selector from GDT (usually 0x10)
         uint8_t reserved;                           // Always set to 0
         uint8_t access;                             // Present bit, Privilege level, and Gate Type (e.g., 0x8E)
         uint16_t handlerAddressHighBits;            // Higher 16 bits of the handler function address
@@ -29,7 +29,7 @@
     } __attribute__((packed));
 
     /*
-     * Manager hardware interrupts via athe Programmable Interrupt Controllers (PIC).
+     * Manager hardware interrupts via the Programmable Interrupt Controllers (PIC).
      */
     struct InterruptManager
     {

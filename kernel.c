@@ -3,7 +3,7 @@
 #include "port.h"
 #include "interrupts.h"
 #include "keyboard.h"
-
+#include "mouse.h"
 /*
  * VGA test mode constants:
  * Screen is 80 columns wide and 25 rows high.
@@ -13,6 +13,7 @@ int cursor_X = 0, cursor_Y = 0;
 struct GlobalDescriptorTable gdt;
 struct InterruptManager interrupt_man;
 struct KeyboardDriver keyboard;
+struct MouseDriver mouse;
 
 /*
  * move_cursor: communicates with the VGA hardware to update the
@@ -98,11 +99,14 @@ void kernelMain(void* multiboot_structure, uint32_t magic)
     init_interrupt_manager(&interrupt_man, 0x20, &gdt);
     kprintf("Initializing Keyboard Driver...\n");
     init_keyboard_driver(&keyboard, &interrupt_man);
-
+    init_mouse_driver(&mouse, &interrupt_man);
+    kprintf("Mouse initialized\n");
 
     activate_interrupts();
-    kprintf("Interrupts activated. System already\n");
-    // enter an infinite loop to keep the CPU from executing garbage memory
+    kprintf("Interrupts activated. System ready\n");
+    // enter an infinite     
+    //3. Push the current Stack Pointer as a parameter for the C function 
+    //loop to keep the CPU from executing garbage memory
     while(1);
 }
 

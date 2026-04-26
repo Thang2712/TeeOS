@@ -1,7 +1,16 @@
 
 #include "interrupts.h"
 
-// IDT Pointer must be static or global to ensure it persists in memory
+#include "keyboard.h"
+#include "mouse.h"
+
+static struct InterruptManager* activeInterruptManager = 0;
+
+extern struct KeyboardDriver keyboard;
+extern struct MouseDriver mouse;
+
+
+// IDT Pointer must be static orWhy is my cursor frozen and unable to click? global to ensure it persists in memory
 static struct InterruptDescriptorTablePointer idt_pointer;
 
 void kprintf(char *str);
@@ -38,9 +47,10 @@ void SetInterruptDescriptorTableEntry(uint8_t interrupt, uint16_t CodeSegment, v
  */
 void init_interrupt_manager(struct InterruptManager* am, uint16_t hardwareInterruptOffset, struct GlobalDescriptorTable* gdt)
 {
+    activeInterruptManager = am;
     am->hardwareInterruptOffset = hardwareInterruptOffset;
 
-    uint16_t CodeSegment = 0x10;        // Usually 0x08 for Kernel Code Segment
+    uint16_t CodeSegment = 0x10;        // Kernel Code Segment (GDT selector 0x10)
 
     const uint8_t IDT_INTERRUPT_GATE = 0xE;
     const uint8_t KERNEL_PRIVILEGE = 0;
@@ -147,7 +157,25 @@ void deactivate_interrupts()
  */
 uint32_t HandleInterrupt(uint32_t interrupt, uint32_t esp)
 {
-    kprintf("Interrupt Occured\n");
+    if (interrupt == 0x21)
+        esp = handle_keyboard_interrupt(&keyboard, esp);
+    else
+        if (interrupt == 0x2C)
+            esp = handle_mouse_interrupt(&mouse, esp);
+        else
+            if (interrupt == 0x20)
+            {
+
+            }
+            else 
+                kprintf("Interrupt Occured");
+    if (interrupt >= 0x20 && interrupt <= 0x2F)
+    {
+        activeInterruptManager->picMasterCommand.Write((struct Port8BitSlow*)&(activeInterruptManager->picMasterCommand), 0x20);
+        if (interrupt >= 0x28) 
+            activeInterruptManager->picSlaveCommand.Write((struct Port8BitSlow*)&(activeInterruptManager->picSlaveCommand), 0x20);
+        
+    }
 
     return esp;
 }

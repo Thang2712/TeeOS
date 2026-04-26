@@ -94,8 +94,8 @@ int_bottom:
     pushl %esp
     call HandleInterrupt
 
-    #4. Clean up the stack after the C call (remove the pushed ESP)
-    addl $4, %esp
+    #4. The return value in %eax is the updated stack pointer - use it
+    mov %eax, %esp
 
     #5. Restore segment registers
     popl %gs

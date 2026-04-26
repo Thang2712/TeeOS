@@ -13,22 +13,29 @@ void init_keyboard_driver(struct KeyboardDriver* driver, struct InterruptManager
     init_port8bit(&(driver->dataport), 0x60);
     init_port8bit(&(driver->commandport), 0x64);
 
-    // 1. Drain the PS/2 controller buffer
-    while (driver->commandport.Read(&(driver->dataport)) & 0x1)
-        driver->dataport.Read(&(driver->commandport));
+    // 1. Drain the PS/2 controller buffer (with timeout to prevent infinite loop)
+    int drain_timeout = 100000;
+    while ((driver->commandport.Read(&(driver->commandport)) & 0x1) && drain_timeout-- > 0)
+        driver->dataport.Read(&(driver->dataport));
 
-    // 2. Activate the PS/2 keyboard interface (Command 0xae)
-    driver->commandport.Write(&(driver->dataport), 0xae);
+    // 2. Activate the PS/2 keyboard interface (Command 0xae = enable)
+    driver->commandport.Write(&(driver->commandport), 0xae);
+    for(volatile int i = 0; i < 100000; i++);  // Longer delay
 
     // 3. Update Controller Configuration Byte
     driver->commandport.Write(&(driver->commandport), 0x20);    // Request config byte
-    uint8_t status = (driver->dataport.Read(&(driver->dataport)) | 1) & ~0x10;
+    for(volatile int i = 0; i < 100000; i++);  // Longer delay
+    uint8_t status = driver->dataport.Read(&(driver->dataport));
+    status = (status | 1) & ~0x10;  // Enable keyboard interrupt
 
     driver->commandport.Write(&(driver->commandport), 0x60);    // Set config byte
+    for(volatile int i = 0; i < 100000; i++);  // Longer delay
     driver->dataport.Write(&(driver->dataport), status);
+    for(volatile int i = 0; i < 100000; i++);  // Longer delay
 
     // 4. Tell the keyboard to start scanning
     driver->dataport.Write(&(driver->dataport), 0xf4);
+    for(volatile int i = 0; i < 100000; i++);  // Longer delay
 
 }
 

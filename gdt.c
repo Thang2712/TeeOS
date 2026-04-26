@@ -42,7 +42,8 @@ void set_segment_descriptor(struct SegmentDescriptor *d, uint32_t base, uint32_t
     if (limit < 65536)
         // small limit: 16-bit address space, byte granularity
         target[6] = 0x40;
-    else {
+    else 
+    {
         // large limit: use 4kb page granularity (g-bit = 1)
         if ((limit & 0xFFF) != 0xFFF)
             limit = (limit >> 12) - 1;
@@ -71,7 +72,8 @@ void set_segment_descriptor(struct SegmentDescriptor *d, uint32_t base, uint32_t
 /*
  * get_segment_base: Extracts the 32-bits base address from a descriptor
  */
-uint16_t get_segment_base(struct SegmentDescriptor *d) {
+uint16_t get_segment_base(struct SegmentDescriptor *d) 
+{
     uint8_t *target = (uint8_t*)d;
     uint32_t result = target[7];
     result = (result << 8) + target[4];
@@ -84,7 +86,8 @@ uint16_t get_segment_base(struct SegmentDescriptor *d) {
 /*
  * get_segment_limits: Extracts the segment limit from a descriptor
  */
-uint32_t get_segment_limit(struct SegmentDescriptor *d) {
+uint32_t get_segment_limit(struct SegmentDescriptor *d) 
+{
     uint8_t *target = (uint8_t*)d;
     uint32_t result = target[6] & 0xF;
     result = (result << 8) + target[1];
@@ -106,7 +109,8 @@ void init_gdt(struct GlobalDescriptorTable *gdt)
 
 
     // Prepare the GDT Pointer (GDTR register format)
-    struct {
+    struct 
+    {
         uint16_t limit;
         uint32_t base;
     } __attribute__((packed)) gdt_ptr;
