@@ -90,8 +90,15 @@ int_bottom:
     pushl %fs
     pushl %gs
 
-    #3. Push the current Stack Pointer as a parameter for the C function
-    pushl %esp
+    #3. Push both parameters for the C function: HandleInterrupt(interrupt, esp)
+    # Stack layout at this point:
+    # %esp + 0: %gs, +4: %fs, +8: %es, +12: %ds
+    # %esp + 16: %eax, +20: %ecx, +24: %edx, +28: %ebx
+    # %esp + 32: original %esp, +36: %ebp, +40: %esi, +44: %edi
+    # %esp + 48: interrupt number, +52: error code
+    movl 48(%esp), %eax       # Load interrupt number into eax
+    pushl %esp                # Push esp as 2nd parameter
+    pushl %eax                # Push interrupt as 1st parameter
     call HandleInterrupt
 
     #4. The return value in %eax is the updated stack pointer - use it

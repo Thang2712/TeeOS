@@ -165,16 +165,32 @@ uint32_t HandleInterrupt(uint32_t interrupt, uint32_t esp)
         else
             if (interrupt == 0x20)
             {
-
+                // Timer interrupt (IRQ0) - just acknowledge it
             }
             else 
-                kprintf("Interrupt Occured");
+            {
+                char buf[32];
+                // Simple hex print for debugging
+                int hex_val = interrupt;
+                int digit_count = 0;
+                int temp = hex_val;
+                while (temp > 0) { digit_count++; temp >>= 4; }
+                if (digit_count == 0) digit_count = 1;
+                
+                kprintf("Unhandled Interrupt: 0x");
+                for (int i = digit_count - 1; i >= 0; i--) {
+                    int digit = (hex_val >> (i * 4)) & 0xF;
+                    buf[0] = (digit < 10) ? ('0' + digit) : ('A' + digit - 10);
+                    buf[1] = '\0';
+                    kprintf(buf);
+                }
+                kprintf("\n");
+            }
     if (interrupt >= 0x20 && interrupt <= 0x2F)
     {
-        activeInterruptManager->picMasterCommand.Write((struct Port8BitSlow*)&(activeInterruptManager->picMasterCommand), 0x20);
-        if (interrupt >= 0x28) 
+        if (interrupt >= 0x28)
             activeInterruptManager->picSlaveCommand.Write((struct Port8BitSlow*)&(activeInterruptManager->picSlaveCommand), 0x20);
-        
+        activeInterruptManager->picMasterCommand.Write((struct Port8BitSlow*)&(activeInterruptManager->picMasterCommand), 0x20);
     }
 
     return esp;
