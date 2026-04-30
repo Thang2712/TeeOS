@@ -16,7 +16,7 @@ ASPARAMS = --32
 LDPARAMS = -m elf_i386
 
 #Build target
-objects = loader.o gdt.o port.o interrupts.o interruptstubs.o keyboard.o mouse.o kernel.o
+objects = loader.o gdt.o driver.o port.o interrupts.o interruptstubs.o keyboard.o mouse.o kernel.o
 
 
 # .PHONY: tells make that 'clean' and 'run' are not actual files, but commands

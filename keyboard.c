@@ -1,4 +1,7 @@
 #include "keyboard.h"
+#include "driver.h"
+
+
 
 void kprintf(char *str);
 
@@ -7,8 +10,9 @@ void kprintf(char *str);
  * @param driver: Pointer to the KeyboardDriver struct instance.
  * @param manager: Pointer to the InterruptManager (for remapping IRQ1)
  */
-void init_keyboard_driver(struct KeyboardDriver* driver, struct InterruptManager* manager)
+void init_keyboard_driver(struct KeyboardDriver* driver, struct InterruptManager* manager, struct KeyboardEvenHandler* handler)
 {
+    driver->handler = handler;
     // Initialize the ports (using the init functions from my port.c)
     init_port8bit(&(driver->dataport), 0x60);
     init_port8bit(&(driver->commandport), 0x64);
@@ -39,6 +43,12 @@ void init_keyboard_driver(struct KeyboardDriver* driver, struct InterruptManager
 
 }
 
+void keyboard_activate(struct KeyboardDriver* driver)
+{
+    // Send the "Activate Scanning" command (0xF4) to the keyboard
+    driver->dataport.Write(&(driver->dataport), 0xF4);
+}
+
 /*
  * Interrupt Service Routine (ISR) for the keyboard
  * This should be called from my main HandleInterrupt function in interrupts.c
@@ -52,72 +62,67 @@ uint32_t handle_keyboard_interrupt(struct KeyboardDriver* driver, uint32_t esp)
     // If the highest bit (0x80) is not set, the key was pressed
     if (key < 0x80)
     {
+        char c = 0;
         switch (key)
         {
                 // Number row
-                case 0x02: kprintf("1"); break;
-                case 0x03: kprintf("2"); break;
-                case 0x04: kprintf("3"); break;
-                case 0x05: kprintf("4"); break;
-                case 0x06: kprintf("5"); break;
-                case 0x07: kprintf("6"); break;
-                case 0x08: kprintf("7"); break;
-                case 0x09: kprintf("8"); break;
-                case 0x0A: kprintf("9"); break;
-                case 0x0B: kprintf("0"); break;
+                case 0x02: c = '1'; break;
+                case 0x03: c = '2'; break;
+                case 0x04: c = '3'; break;
+                case 0x05: c = '4'; break;
+                case 0x06: c = '5'; break;
+                case 0x07: c = '6'; break;
+                case 0x08: c = '7'; break;
+                case 0x09: c = '8'; break;
+                case 0x0A: c = '9'; break;
+                case 0x0B: c = '0'; break;
 
                 // QWERTY row (adjust from your previous
-                case 0x10: kprintf("q"); break;
-                case 0x11: kprintf("w"); break;
-                case 0x12: kprintf("e"); break;
-                case 0x13: kprintf("r"); break;
-                case 0x14: kprintf("t"); break;
-                case 0x15: kprintf("y"); break;
-                case 0x16: kprintf("u"); break;
-                case 0x17: kprintf("i"); break;
-                case 0x18: kprintf("o"); break;
-                case 0x19: kprintf("p"); break;
+                case 0x10: c = 'q'; break;
+                case 0x11: c = 'w'; break;
+                case 0x12: c = 'e'; break;
+                case 0x13: c = 'r'; break;
+                case 0x14: c = 't'; break;
+                case 0x15: c = 'y'; break;
+                case 0x16: c = 'u'; break;
+                case 0x17: c = 'i'; break;
+                case 0x18: c = 'o'; break;
+                case 0x19: c = 'p'; break;
 
                 // Home row
-                case 0x1E: kprintf("a"); break;
-                case 0x1F: kprintf("s"); break;
-                case 0x20: kprintf("d"); break;
-                case 0x21: kprintf("f"); break;
-                case 0x22: kprintf("g"); break;
-                case 0x23: kprintf("h"); break;
-                case 0x24: kprintf("j"); break;
-                case 0x25: kprintf("k"); break;
-                case 0x26: kprintf("l"); break;
+                case 0x1E: c = 'a'; break;
+                case 0x1F: c = 's'; break;
+                case 0x20: c = 'd'; break;
+                case 0x21: c = 'f'; break;
+                case 0x22: c = 'g'; break;
+                case 0x23: c = 'h'; break;
+                case 0x24: c = 'j'; break;
+                case 0x25: c = 'k'; break;
+                case 0x26: c = 'l'; break;
 
                 // Bottom row
-                case 0x2C: kprintf("z"); break;
-                case 0x2D: kprintf("x"); break;
-                case 0x2E: kprintf("c"); break;
-                case 0x2F: kprintf("v"); break;
-                case 0x30: kprintf("b"); break;
-                case 0x31: kprintf("n"); break;
-                case 0x32: kprintf("m"); break;
+                case 0x2C: c = 'z'; break;
+                case 0x2D: c = 'x'; break;
+                case 0x2E: c = 'c'; break;
+                case 0x2F: c = 'v'; break;
+                case 0x30: c = 'b'; break;
+                case 0x31: c = 'n'; break;
+                case 0x32: c = 'm'; break;
 
                 // Special Key
-                case 0x1C: kprintf("\n"); break;
-                case 0x39: kprintf(" "); break;
-
+                case 0x1C: c = '\n'; break;
+                case 0x39: c = ' '; break;
 
                 default:
-                {
-                    // Fallback for unknown scancodes: Print the hex values
-                    static char* hex = "0123456789ABCDEF";
-                    kprintf("[0x");
-                    char lo = hex[key & 0x0F];
-                    char hi = hex[(key >> 4) & 0x0F];
-                    // Manually printing hex to avoid complex printf logic
-                    char out[3] = {hi, lo, '\0'};
-                    kprintf(out);
-                    kprintf("]");
+                    // Unknown scancode - ignore it
                     break;
-                }
         }
+        if (c != 0 && driver->handler != 0 && driver->handler->OnKeyDown != 0)
+            driver->handler->OnKeyDown(c);
     }
+    else 
+        if (driver->handler != 0 && driver->handler->OnKeyUp != 0)
+            driver->handler->OnKeyUp(key - 0x80); // We don't have the character for key release, so we pass 0 or could enhance to track key states
 
     return esp;
 }

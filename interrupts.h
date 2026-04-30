@@ -29,6 +29,15 @@
     } __attribute__((packed));
 
     /*
+     * Structure representing an interrupt handler.
+     */
+    struct InterruptHandler
+    {
+        uint32_t (*Handle)(struct InterruptHandler* self, uint32_t esp);
+        void* instance;
+    };
+
+    /*
      * Manager hardware interrupts via the Programmable Interrupt Controllers (PIC).
      */
     struct InterruptManager
@@ -38,6 +47,7 @@
         struct Port8BitSlow picMasterData;          // Data port for Master PIC (0x21)
         struct Port8BitSlow picSlaveCommand;        // Command port for Slave PIC (0xA0)
         struct Port8BitSlow picSlaveData;           // Data port for Slave PIC (0xA1)
+        struct InterruptHandler* handlers[256];     // Array of handlers for each interrupt (0-255)
     };
 
     /*

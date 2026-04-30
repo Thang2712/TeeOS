@@ -2,6 +2,7 @@
 #include "gdt.h"
 #include "port.h"
 #include "interrupts.h"
+#include "driver.h"
 #include "keyboard.h"
 #include "mouse.h"
 /*
@@ -43,6 +44,7 @@ void move_cursor(int x, int y)
     dataPort.Write(&dataPort, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
+
 /*
  * kprintf: Kernel Print Function.
  * Writes strings directly to VGA memory and handles basic newline (\n) logic.
@@ -81,6 +83,54 @@ void kprintf(char* str)
     move_cursor(cursor_X, cursor_Y);
 }
 
+
+
+void printfHex(uint8_t key)
+{
+    char* foo = "00";
+    char* hex = "0123456789ABCDEF";
+    foo[0] = hex[(key >> 4) & 0x0F];
+    foo[1] = hex[key & 0x0F];
+    kprintf(foo); 
+}
+
+void my_keydown_handler(char c)
+{
+    char buf[] = " "; 
+    buf[0] = c;
+    kprintf(buf);
+}
+
+
+static int mouse_X = 40, mouse_Y = 12;
+void my_mousemove_handler(int8_t xoffset, int8_t yoffset)
+{
+    uint16_t *VideoMemory = (uint16_t*)0xB8000;
+
+    VideoMemory[80 * mouse_Y + mouse_X] = (VideoMemory[80 * mouse_Y + mouse_X] & 0x0F00) << 4
+                                        | (VideoMemory[80 * mouse_Y + mouse_X] & 0xF000) >> 4
+                                        | (VideoMemory[80 * mouse_Y + mouse_X] & 0x00FF);
+    
+    mouse_X += xoffset;
+    if (mouse_X < 0) mouse_X = 0;
+    if (mouse_X >= 80) mouse_X = 79;
+
+    mouse_Y += yoffset;
+    if (mouse_Y < 0) mouse_Y = 0;
+    if (mouse_Y >= 25) mouse_Y = 24;
+
+    VideoMemory[80 * mouse_Y + mouse_X] = (VideoMemory[80 * mouse_Y + mouse_X] & 0x0F00) << 4
+                                        | (VideoMemory[80 * mouse_Y + mouse_X] & 0xF000) >> 4
+                                        | (VideoMemory[80 * mouse_Y + mouse_X] & 0x00FF);
+
+}
+
+
+
+
+
+
+
 /*
  * kernelMain: the primary C entry point called by the assembly loader
  * @param multiboot_structure: pointer to info provided by the bootloader (GRUB)
@@ -98,10 +148,26 @@ void kernelMain(void* multiboot_structure, uint32_t magic)
 
     init_interrupt_manager(&interrupt_man, 0x20, &gdt);
     kprintf("Initializing Keyboard Driver...\n");
-    init_keyboard_driver(&keyboard, &interrupt_man);
-    init_mouse_driver(&mouse, &interrupt_man);
+
+    struct DriverManager drvManger; 
+    init_driver_manager(&drvManger);
+
+    static struct KeyboardEvenHandler kb_handler;
+    kb_handler.OnKeyDown = &my_keydown_handler;
+    init_keyboard_driver(&keyboard, &interrupt_man, &kb_handler);
+    driver_manager_add_driver(&drvManger, (struct Driver*)&keyboard);
+    kprintf("Keyboard initialized\n");
+
+    static struct MouseEventHandler m_handler;
+    m_handler.OnMouseMove = my_mousemove_handler;
+    init_mouse_driver(&mouse, &interrupt_man, &m_handler);
+    driver_manager_add_driver(&drvManger, (struct Driver*)&mouse);
     kprintf("Mouse initialized\n");
 
+    kprintf("Activating Hardware Drivers......\n");
+    driver_manager_activate_all(&drvManger);
+
+    kprintf("System already. Listening for interrupts.................\n");
     activate_interrupts();
     kprintf("Interrupts activated. System ready\n");
     // enter an infinite     

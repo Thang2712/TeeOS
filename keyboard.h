@@ -11,16 +11,26 @@
      */
     struct KeyboardDriver
     {
+        struct InterruptHandler base;
         struct Port8Bit dataport;       // Port 0x60: Data Register
         struct Port8Bit commandport;    // Port 0x64: Status/ Command Register
+        struct KeyboardEvenHandler* handler; // User-defined event handlers for key events
     };
+
+    struct KeyboardEvenHandler
+    {
+        void (*OnKeyDown)(char);
+        void (*OnKeyUp)(char);
+    };
+
 
     /*
      * Initializes the keyboard driver hardware and internal state.
      * @param driver Pointer to the KeyboardDriver instance.
      * @param manager Pointer to the Interrupt Manager to register the handler.
      */
-    void init_keyboard_driver(struct KeyboardDriver *driver, struct InterruptManager *manager);
+    void init_keyboard_driver(struct KeyboardDriver *driver, struct InterruptManager *manager, struct KeyboardEvenHandler* handler);
+    void keyboard_activate(struct KeyboardDriver* driver);
 
     /*
      * The interrupt service routine (ISR) for keyboard events (IRQ1)

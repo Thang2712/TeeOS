@@ -14,6 +14,8 @@ add_executable(untitled kernel.c
         keyboard.h
         keyboard.c
         mouse.h
-        mouse.c)
+        mouse.c
+        driver.h
+        driver.c)
 
 enable_language(ASM)

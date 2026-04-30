@@ -1,8 +1,8 @@
 
 #include "interrupts.h"
-
 #include "keyboard.h"
 #include "mouse.h"
+#include "driver.h"
 
 static struct InterruptManager* activeInterruptManager = 0;
 
@@ -49,6 +49,10 @@ void init_interrupt_manager(struct InterruptManager* am, uint16_t hardwareInterr
 {
     activeInterruptManager = am;
     am->hardwareInterruptOffset = hardwareInterruptOffset;
+    
+    // Initialize all handlers to null
+    for (int i = 0; i < 256; i++)
+        am->handlers[i] = 0;
 
     uint16_t CodeSegment = 0x10;        // Kernel Code Segment (GDT selector 0x10)
 
@@ -60,7 +64,7 @@ void init_interrupt_manager(struct InterruptManager* am, uint16_t hardwareInterr
         SetInterruptDescriptorTableEntry(i, CodeSegment, &InterruptIgnore, KERNEL_PRIVILEGE, IDT_INTERRUPT_GATE);
 
     // Setup Exception handlers (0x00 - 0x13)
-    SetInterruptDescriptorTableEntry(0x00, CodeSegment, &HandleException0x00, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x00, CodeSegment, &HandleException0x00, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(0x01, CodeSegment, &HandleException0x01, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(0x02, CodeSegment, &HandleException0x02, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(0x03, CodeSegment, &HandleException0x03, 0,IDT_INTERRUPT_GATE);
@@ -70,34 +74,34 @@ void init_interrupt_manager(struct InterruptManager* am, uint16_t hardwareInterr
     SetInterruptDescriptorTableEntry(0x07, CodeSegment, &HandleException0x07, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(0x08, CodeSegment, &HandleException0x08, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(0x09, CodeSegment, &HandleException0x09, 0,IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x0A, CodeSegment, &HandleException0x0A, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x0B, CodeSegment, &HandleException0x0B, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x0C, CodeSegment, &HandleException0x0C, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x0D, CodeSegment, &HandleException0x0D, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x0E, CodeSegment, &HandleException0x0E, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x0F, CodeSegment, &HandleException0x0F, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x10, CodeSegment, &HandleException0x10, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x11, CodeSegment, &HandleException0x11, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x12, CodeSegment, &HandleException0x12, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(0x13, CodeSegment, &HandleException0x13, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x0A, CodeSegment, &HandleException0x0A, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x0B, CodeSegment, &HandleException0x0B, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x0C, CodeSegment, &HandleException0x0C, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x0D, CodeSegment, &HandleException0x0D, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x0E, CodeSegment, &HandleException0x0E, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x0F, CodeSegment, &HandleException0x0F, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x10, CodeSegment, &HandleException0x10, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x11, CodeSegment, &HandleException0x11, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x12, CodeSegment, &HandleException0x12, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(0x13, CodeSegment, &HandleException0x13, 0,IDT_INTERRUPT_GATE);
 
     // Setup Hardware Interrupt Request (IRQ) handlers remapped starting at hardwareInterruptOffset
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x00, CodeSegment, &HandleInterruptRequest0x00, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x00, CodeSegment, &HandleInterruptRequest0x00, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x01, CodeSegment, &HandleInterruptRequest0x01, 0,IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x02, CodeSegment, &HandleInterruptRequest0x02, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x02, CodeSegment, &HandleInterruptRequest0x02, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x03, CodeSegment, &HandleInterruptRequest0x03, 0,IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x04,  CodeSegment, &HandleInterruptRequest0x04, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x04, CodeSegment, &HandleInterruptRequest0x04, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x05, CodeSegment, &HandleInterruptRequest0x05, 0,IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x06,  CodeSegment, &HandleInterruptRequest0x06, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x06, CodeSegment, &HandleInterruptRequest0x06, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x07, CodeSegment, &HandleInterruptRequest0x07, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x08, CodeSegment, &HandleInterruptRequest0x08, 0,IDT_INTERRUPT_GATE);
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x09, CodeSegment, &HandleInterruptRequest0x09, 0,IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0A, CodeSegment, &HandleInterruptRequest0x0A, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0B, CodeSegment, &HandleInterruptRequest0x0B, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0C, CodeSegment, &HandleInterruptRequest0x0C, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0D, CodeSegment, &HandleInterruptRequest0x0D, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0E, CodeSegment, &HandleInterruptRequest0x0E, 0, IDT_INTERRUPT_GATE);
-    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0F, CodeSegment, &HandleInterruptRequest0x0F, 0, IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0A, CodeSegment, &HandleInterruptRequest0x0A, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0B, CodeSegment, &HandleInterruptRequest0x0B, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0C, CodeSegment, &HandleInterruptRequest0x0C, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0D, CodeSegment, &HandleInterruptRequest0x0D, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0E, CodeSegment, &HandleInterruptRequest0x0E, 0,IDT_INTERRUPT_GATE);
+    SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0F, CodeSegment, &HandleInterruptRequest0x0F, 0,IDT_INTERRUPT_GATE);
 
     //Initialize Programmable Interrupt Controllers (PIC) ports
     init_port8bit_slow((struct Port8Bit*) & (am->picMasterCommand), 0x20);
@@ -155,37 +159,38 @@ void deactivate_interrupts()
  * @param interrupt The interrupt vector number
  * @param esp The stack pointer containing saved registers.
  */
-uint32_t HandleInterrupt(uint32_t interrupt, uint32_t esp)
-{
-    if (interrupt == 0x21)
+uint32_t HandleInterrupt(uint32_t interrupt, uint32_t esp) {
+    if (activeInterruptManager->handlers[interrupt] != 0)
+        esp = activeInterruptManager->handlers[interrupt]->Handle(activeInterruptManager->handlers[interrupt], esp);
+    else if (interrupt == 0x21)
         esp = handle_keyboard_interrupt(&keyboard, esp);
+    else if (interrupt == 0x2C)
+        esp = handle_mouse_interrupt(&mouse, esp);
     else
-        if (interrupt == 0x2C)
-            esp = handle_mouse_interrupt(&mouse, esp);
+        if (interrupt == 0x20)
+        {
+            // Timer interrupt (IRQ0) - just acknowledge it
+        }
         else
-            if (interrupt == 0x20)
+        {
+            char buf[32];
+            // Simple hex print for debugging
+            int hex_val = interrupt;
+            int digit_count = 0;
+            int temp = hex_val;
+            while (temp > 0) { digit_count++; temp >>= 4; }
+            if (digit_count == 0) digit_count = 1;
+
+            kprintf("Unhandled Interrupt: 0x");
+            for (int i = digit_count - 1; i >= 0; i--)
             {
-                // Timer interrupt (IRQ0) - just acknowledge it
+                int digit = (hex_val >> (i * 4)) & 0xF;
+                buf[0] = (digit < 10) ? ('0' + digit) : ('A' + digit - 10);
+                buf[1] = '\0';
+                kprintf(buf);
             }
-            else 
-            {
-                char buf[32];
-                // Simple hex print for debugging
-                int hex_val = interrupt;
-                int digit_count = 0;
-                int temp = hex_val;
-                while (temp > 0) { digit_count++; temp >>= 4; }
-                if (digit_count == 0) digit_count = 1;
-                
-                kprintf("Unhandled Interrupt: 0x");
-                for (int i = digit_count - 1; i >= 0; i--) {
-                    int digit = (hex_val >> (i * 4)) & 0xF;
-                    buf[0] = (digit < 10) ? ('0' + digit) : ('A' + digit - 10);
-                    buf[1] = '\0';
-                    kprintf(buf);
-                }
-                kprintf("\n");
-            }
+            kprintf("\n");
+        }
     if (interrupt >= 0x20 && interrupt <= 0x2F)
     {
         if (interrupt >= 0x28)
