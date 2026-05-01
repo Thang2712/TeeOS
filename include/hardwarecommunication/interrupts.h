@@ -40,7 +40,7 @@
     /*
      * Manager hardware interrupts via the Programmable Interrupt Controllers (PIC).
      */
-    struct InterruptManager
+    typedef struct InterruptManager
     {
         uint16_t hardwareInterruptOffset;           // Base offset for IRQs (e.g., 0x20 to avoid Exceptions)
         struct Port8BitSlow picMasterCommand;       // Command port for Master PIC (0x20)
@@ -48,7 +48,7 @@
         struct Port8BitSlow picSlaveCommand;        // Command port for Slave PIC (0xA0)
         struct Port8BitSlow picSlaveData;           // Data port for Slave PIC (0xA1)
         struct InterruptHandler* handlers[256];     // Array of handlers for each interrupt (0-255)
-    };
+    } interrupt_manager_t;
 
     /*
      * CPU Exception Handlers (interrupts 0x00 - 0x13)

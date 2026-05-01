@@ -21,7 +21,7 @@ set(SOURCE_FILES
     src/interruptstubs.s
 )
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32 -ffreestanding -fno-stack-protector -fno-pie -fno-builtin -nostdlib")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32 -ffreestanding -fno-stack-protector -fno-pie -fno-builtin -nostdlib -D__i386__")
 set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -m32")
 
 add_executable(mykernel.bin ${SOURCE_FILES})

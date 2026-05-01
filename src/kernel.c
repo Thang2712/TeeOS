@@ -168,7 +168,7 @@ void kernelMain(void* multiboot_structure, uint32_t magic)
     kprintf("Scanning PCI Bus .............\n");
     pci_controller_t pci; 
     pci_init(&pci); 
-    pci_select_drivers(&pci, &drvManger);
+    pci_select_drivers(&pci, &drvManger, &interrupt_man);
     kprintf("PCI devices initialized\n");
 
 
