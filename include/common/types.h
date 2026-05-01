@@ -14,9 +14,14 @@
     typedef long long int64_t;          // extractly 64 bits (8 byte)
     typedef unsigned long long uint64_t;// 64-bit unsigned
 
+    /* String definition*/
+    /* string represents a pointer to a constant sequence of characters
+     * Use this for read-only text literals throughout the kernel. */
     typedef const char* string;
+
     /* Standard definitions */
     /* size_t is used to represent the size of objects in memory.
-     * for a 32-bit kernel, uint32_t is the appropriate size.*/
+     * for a 32-bit kernel, uint32_t is the appropriate size.
+     * This ensures compatibility with standard memory management functions.*/
     typedef uint32_t size_t;
 #endif
