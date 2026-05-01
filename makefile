@@ -1,40 +1,49 @@
-#Complier & Linker Flags
+# Compiler & Linker Flags
 
-#GCCPARAMS:
+# GCCPARAMS:
 # -m32: Compile for 32-bit x86 (standard for early OS dev)
 # -ffreestanding: Tells GCC there's no standard library (no stdio.h, etc.)
 # -fno-stack-protector: Disables stack smashing protection (which requires an OS)
-# -fno-pie: Disables position independent executable (we need fixed memory addresss)
-GCCPARAMS = -m32 -ffreestanding -fno-stack-protector -fno-pie
+# -fno-pie: Disables position independent executable (we need fixed memory address)
+GCCPARAMS = -m32 -Iinclude -ffreestanding -fno-stack-protector -fno-pie -fno-builtin -nostdlib -Wno-write-strings
 
-#ASPARAMS:
-# --32: Assemble for the 32-bit architecture
+# ASPARAMS:
+# --32: Generate 32-bit code (GNU Assembler syntax)
 ASPARAMS = --32
 
-#LDPARAMS:
+# LDPARAMS:
 # -m elf_i386: Link as a 32-bit ELF (executable and linkable format) file
 LDPARAMS = -m elf_i386
 
-#Build target
-objects = loader.o gdt.o driver.o port.o interrupts.o interruptstubs.o keyboard.o mouse.o kernel.o
+# Build target
+objects = obj/loader.o \
+	obj/kernel.o \
+	obj/gdt.o \
+	obj/drivers/driver.o \
+	obj/hardwarecommunication/port.o \
+	obj/hardwarecommunication/interrupts.o \
+	obj/drivers/keyboard.o \
+	obj/drivers/mouse.o \
+	obj/interruptstubs.o
 
-
-# .PHONY: tells make that 'clean' and 'run' are not actual files, but commands
-.PHONY: clean run
+# .PHONY: tells make that these are not actual files, but commands
+.PHONY: clean run run-bin run-iso install
 
 # Rule to compile C files into objects files
-%.o: %.c
-		gcc $(GCCPARAMS) -o $@ -c $<
+obj/%.o: src/%.c
+	@mkdir -p $(@D)
+	gcc $(GCCPARAMS) -c -o $@ $<
 
 # Rule to assemble .s files into objects files
-%.o: %.s
-		as $(ASPARAMS) -o $@ $<
+obj/%.o: src/%.s
+	@mkdir -p $(@D)
+	as $(ASPARAMS) -o $@ $<
 
 # The final linking step: Uses my linker.ld script to create the binary
 mykernel.bin: linker.ld $(objects)
 	ld $(LDPARAMS) -T linker.ld -o $@ $(objects)
 
-# Install: copies the kernel binary to the system's /boot directory (experimental/bare mental)
+# Install: copies the kernel binary to the system's /boot directory
 install: mykernel.bin
 	sudo cp $< /boot/mykernel.bin
 
@@ -59,11 +68,11 @@ clean:
 
 # Utility to launch the kernel in the QEMU emulator
 run-bin: mykernel.bin
-		qemu-system-i386 -kernel mykernel.bin
+	qemu-system-i386 -kernel mykernel.bin
 
 # Utility to launch the OS using VirtualBox:
 # 1. kill any running instances of VirtualBox to avoid lock errors
 # 2. Starts the specific VM named "TeeOS" using the generated ISO
 run-iso: mykernel.iso
-		(killall VirtualBoxVM && sleep1) || true
-		VirtualBoxVM --startvm "TeeOS"
+	(killall VirtualBoxVM && sleep 1) || true
+	VirtualBoxVM --startvm "TeeOS"
