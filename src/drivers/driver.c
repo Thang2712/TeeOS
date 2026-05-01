@@ -1,13 +1,13 @@
 #include <drivers/driver.h>
 
-void init_driver(struct Driver* driver)
+void init_driver(driver_t* driver)
 {
     driver->Activate = 0;
     driver->Reset = 0;
     driver->Deactivate = 0;
 }
 
-void init_driver_manager(struct DriverManager* manager)
+void init_driver_manager(driver_manager_t* manager)
 {
     manager->numDrivers = 0;
 
@@ -15,7 +15,7 @@ void init_driver_manager(struct DriverManager* manager)
         manager->drivers[i] = 0;
 }
 
-void driver_manager_add_driver(struct DriverManager* manager, struct Driver* drv)
+void driver_manager_add_driver(driver_manager_t* manager, driver_t* drv)
 {
     if (manager->numDrivers < MAX_DRIVERS)
     {
@@ -24,7 +24,7 @@ void driver_manager_add_driver(struct DriverManager* manager, struct Driver* drv
     }
 }
 
-void driver_manager_activate_all(struct DriverManager* manager)
+void driver_manager_activate_all(driver_manager_t* manager)
 {
     for (int i = 0; i < manager->numDrivers; i++)
         if (manager->drivers[i] != 0 && manager->drivers[i]->Activate != 0)

@@ -2,6 +2,7 @@
 #include <gdt.h>
 #include <hardwarecommunication/port.h>
 #include <hardwarecommunication/interrupts.h>
+#include <hardwarecommunication/pci.h>
 #include <drivers/driver.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
@@ -163,6 +164,13 @@ void kernelMain(void* multiboot_structure, uint32_t magic)
     init_mouse_driver(&mouse, &interrupt_man, &m_handler);
     driver_manager_add_driver(&drvManger, (struct Driver*)&mouse);
     kprintf("Mouse initialized\n");
+
+    kprintf("Scanning PCI Bus .............\n");
+    pci_controller_t pci; 
+    pci_init(&pci); 
+    pci_select_drivers(&pci, &drvManger);
+    kprintf("PCI devices initialized\n");
+
 
     kprintf("Activating Hardware Drivers......\n");
     driver_manager_activate_all(&drvManger);

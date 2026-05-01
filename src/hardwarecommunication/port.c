@@ -35,29 +35,29 @@ static inline void outb_show(uint16_t port, uint8_t data)
 }
 
 /* 8-Bit Port Implementation */
-void port8bit_write(struct Port8Bit* self, uint8_t data) 
+void port8bit_write(port8bit_t* self, uint8_t data) 
 {
     outb(self->portnumber, data);
 }
 
-uint8_t port8bit_read(struct Port8Bit* self) 
+uint8_t port8bit_read(port8bit_t* self) 
 {
     return inb(self->portnumber);
 }
 
-void port8bit_slow_write(struct Port8Bit* self, uint8_t data) 
+void port8bit_slow_write(port8bitslow_t* self, uint8_t data) 
 {
     outb_show(self->portnumber, data);
 }
 
 /* 16-Bit Port Implementation */
-void port16bit_write(struct Port16Bit* self, uint16_t data) 
+void port16bit_write(port16bit_t* self, uint16_t data) 
 {
     // outw is used for 16-bit (word) data transfers
     asm volatile ("outw %0, %1" : : "a" (data), "Nd"(self->portnumber));
 }
 
-uint16_t port16bit_read(struct Port16Bit* self) 
+uint16_t port16bit_read(port16bit_t* self) 
 {
     uint16_t result;
     asm volatile ("inw %1, %0" : "=a"(result) : "Nd"(self->portnumber));
@@ -65,13 +65,13 @@ uint16_t port16bit_read(struct Port16Bit* self)
 }
 
 /* 32-Bit Port Implemtation */
-void port32bit_write(struct Port32Bit* self, uint32_t data) 
+void port32bit_write(port32bit_t* self, uint32_t data) 
 {
     // outl is used for 32-bit (long) data transfers
     asm volatile ("outl %0, %1" : : "a" (data), "Nd" (self->portnumber));
 }
 
-uint32_t port32bit_read(struct Port32Bit* self) 
+uint32_t port32bit_read(port32bit_t* self) 
 {
     uint32_t result;
     asm volatile ("inl %1, %0" : "=a" (result) : "Nd"(self->portnumber));
@@ -84,28 +84,28 @@ uint32_t port32bit_read(struct Port32Bit* self)
  * these function initialize the struct by assigning the port number
  * and linking the function to the actual implementations
  */
-void init_port8bit(struct Port8Bit *self, uint16_t portnumber) 
+void init_port8bit(port8bit_t *self, uint16_t portnumber) 
 {
     self->portnumber = portnumber;
     self->Write = port8bit_write;
     self->Read = port8bit_read;
 }
 
-void init_port8bit_slow(struct Port8Bit *self, uint16_t portnumber) 
+void init_port8bit_slow(port8bitslow_t *self, uint16_t portnumber) 
 {
     self->portnumber = portnumber;
     self->Write = port8bit_slow_write;
     // Note: no read function is typically used for slow parts
 }
 
-void init_port16bit(struct Port16Bit *self, uint16_t portnumber) 
+void init_port16bit(port16bit_t *self, uint16_t portnumber) 
 {
     self->portnumber = portnumber;
     self->Write = port16bit_write;
     self->Read = port16bit_read;
 }
 
-void init_port32bit(struct Port32Bit *self, uint32_t portnumber) 
+void init_port32bit(port32bit_t *self, uint32_t portnumber) 
 {
     self->portnumber = portnumber;
     self->Write = port32bit_write;

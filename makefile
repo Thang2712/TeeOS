@@ -22,6 +22,7 @@ objects = obj/loader.o \
 	obj/drivers/driver.o \
 	obj/hardwarecommunication/port.o \
 	obj/hardwarecommunication/interrupts.o \
+	obj/hardwarecommunication/pci.o \
 	obj/drivers/keyboard.o \
 	obj/drivers/mouse.o \
 	obj/interruptstubs.o

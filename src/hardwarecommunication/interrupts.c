@@ -1,4 +1,3 @@
-
 #include <hardwarecommunication/interrupts.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
@@ -104,30 +103,30 @@ void init_interrupt_manager(struct InterruptManager* am, uint16_t hardwareInterr
     SetInterruptDescriptorTableEntry(hardwareInterruptOffset + 0x0F, CodeSegment, &HandleInterruptRequest0x0F, 0,IDT_INTERRUPT_GATE);
 
     //Initialize Programmable Interrupt Controllers (PIC) ports
-    init_port8bit_slow((struct Port8Bit*) & (am->picMasterCommand), 0x20);
-    init_port8bit_slow((struct Port8Bit*) &(am->picMasterData), 0x21);
-    init_port8bit_slow((struct Port8Bit*) &(am->picSlaveCommand), 0xA0);
-    init_port8bit_slow((struct Port8Bit*) &(am->picSlaveData), 0xA1);
+    init_port8bit_slow(&(am->picMasterCommand), 0x20);
+    init_port8bit_slow(&(am->picMasterData), 0x21);
+    init_port8bit_slow(&(am->picSlaveCommand), 0xA0);
+    init_port8bit_slow(&(am->picSlaveData), 0xA1);
 
     // ICW1: Start PIC initialization in cascade mode
-    am->picMasterCommand.Write((struct Port8BitSlow*) & (am->picMasterCommand), 0x11);
-    am->picSlaveCommand.Write((struct Port8BitSlow*) & (am->picSlaveCommand), 0x11);
+    am->picMasterCommand.Write(&(am->picMasterCommand), 0x11);
+    am->picSlaveCommand.Write(&(am->picSlaveCommand), 0x11);
 
     // ICW2: Remap IRQ base addresses to avoid conflict with CPU exceptions
-    am->picMasterData.Write((struct Port8BitSlow*) & (am->picMasterData), hardwareInterruptOffset);
-    am->picSlaveData.Write((struct Port8BitSlow*) & (am->picSlaveData), hardwareInterruptOffset + 8);
+    am->picMasterData.Write(&(am->picMasterData), hardwareInterruptOffset);
+    am->picSlaveData.Write(&(am->picSlaveData), hardwareInterruptOffset + 8);
 
     // ICW3: Tell Master PIC there is a slave at IRQ2, and tell Slave PIC its identity
-    am->picMasterData.Write((struct Port8BitSlow*) & (am->picMasterData), 0x04);
-    am->picSlaveData.Write((struct Port8BitSlow*) & (am->picSlaveData), 0x02);
+    am->picMasterData.Write(&(am->picMasterData), 0x04);
+    am->picSlaveData.Write(&(am->picSlaveData), 0x02);
 
     // ICW4: Set PIC to 8086 mode
-    am->picMasterData.Write((struct Port8BitSlow*) & (am->picMasterData), 0x01);
-    am->picSlaveData.Write((struct Port8BitSlow*) & (am->picSlaveData), 0x01);
+    am->picMasterData.Write(&(am->picMasterData), 0x01);
+    am->picSlaveData.Write(&(am->picSlaveData), 0x01);
 
     // OCW1: Unmask all interrupts (0x00 means all enables)
-    am->picMasterData.Write((struct Port8BitSlow*) & (am->picMasterData), 0x00);
-    am->picSlaveData.Write((struct Port8BitSlow*) & (am->picSlaveData), 0x00);
+    am->picMasterData.Write(&(am->picMasterData), 0x00);
+    am->picSlaveData.Write(&(am->picSlaveData), 0x00);
 
 
     // Load the IDT into the CPU register
@@ -194,8 +193,8 @@ uint32_t HandleInterrupt(uint32_t interrupt, uint32_t esp) {
     if (interrupt >= 0x20 && interrupt <= 0x2F)
     {
         if (interrupt >= 0x28)
-            activeInterruptManager->picSlaveCommand.Write((struct Port8BitSlow*)&(activeInterruptManager->picSlaveCommand), 0x20);
-        activeInterruptManager->picMasterCommand.Write((struct Port8BitSlow*)&(activeInterruptManager->picMasterCommand), 0x20);
+            activeInterruptManager->picSlaveCommand.Write(&(activeInterruptManager->picSlaveCommand), 0x20);
+        activeInterruptManager->picMasterCommand.Write(&(activeInterruptManager->picMasterCommand), 0x20);
     }
 
     return esp;
