@@ -6,6 +6,7 @@
 #include <drivers/driver.h>
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
+#include <drivers/vga.h>
 /*
  * VGA test mode constants:
  * Screen is 80 columns wide and 25 rows high.
@@ -128,10 +129,6 @@ void my_mousemove_handler(int8_t xoffset, int8_t yoffset)
 
 
 
-
-
-
-
 /*
  * kernelMain: the primary C entry point called by the assembly loader
  * @param multiboot_structure: pointer to info provided by the bootloader (GRUB)
@@ -142,45 +139,62 @@ void kernelMain(void* multiboot_structure, uint32_t magic)
     // Initialize the Global Descriptor Table for memory protection/segmentation
     init_gdt(&gdt);
 
-    // Output boot messages to the screen
+    // Output boot messages to the screen (Standard Text Mode)
     kprintf("Hello World --- Mr.Teejaze\n");
     kprintf("GDT initialized successfully\n");
 
-
+    // Initialize Interrupt Management
     init_interrupt_manager(&interrupt_man, 0x20, &gdt);
-    kprintf("Initializing Keyboard Driver...\n");
 
-    struct DriverManager drvManger; 
+    // Initialize Driver Manager
+    struct DriverManager drvManger;
     init_driver_manager(&drvManger);
 
+    // 1. Initialize Standard Input Drivers
+    kprintf("Initializing Keyboard Driver...\n");
     static struct KeyboardEvenHandler kb_handler;
     kb_handler.OnKeyDown = &my_keydown_handler;
     init_keyboard_driver(&keyboard, &interrupt_man, &kb_handler);
     driver_manager_add_driver(&drvManger, (struct Driver*)&keyboard);
-    kprintf("Keyboard initialized\n");
 
+    kprintf("Initializing Mouse Driver...\n");
     static struct MouseEventHandler m_handler;
     m_handler.OnMouseMove = my_mousemove_handler;
     init_mouse_driver(&mouse, &interrupt_man, &m_handler);
     driver_manager_add_driver(&drvManger, (struct Driver*)&mouse);
-    kprintf("Mouse initialized\n");
 
+    // 2. Initialize PCI and scan for hardware-specific drivers
     kprintf("Scanning PCI Bus .............\n");
-    pci_controller_t pci; 
-    pci_init(&pci); 
+    pci_controller_t pci;
+    pci_init(&pci);
     pci_select_drivers(&pci, &drvManger, &interrupt_man);
-    kprintf("PCI devices initialized\n");
 
+    // 3. Initialize VGA Driver
+    // Note: We do this before activating drivers to ensure the struct is ready
+    vga_driver_t vga;
+    vga_init(&vga);
 
     kprintf("Activating Hardware Drivers......\n");
     driver_manager_activate_all(&drvManger);
 
-    kprintf("System already. Listening for interrupts.................\n");
+    // 4. Switch to Graphics Mode
+    // This will clear the kprintf text messages as the hardware switches modes
+    if (vga_set_mode(&vga, 320, 200, 8))
+    {
+        // Fill the background with the specific dark blue color
+        for(int32_t y = 0; y < 200; y++)
+        {
+            for(int32_t x = 0; x < 320; x++)
+            {
+                // Using the RGB helper: (0, 0, 168) maps to Palette Index 0x01
+                vga_put_pixel_rgb(&vga, x, y, 0x00, 0x00, 0xA8);
+            }
+        }
+    }
+
+    kprintf("System ready. Listening for interrupts.................\n");
     activate_interrupts();
-    kprintf("Interrupts activated. System ready\n");
-    // enter an infinite     
-    //3. Push the current Stack Pointer as a parameter for the C function 
-    //loop to keep the CPU from executing garbage memory
+
+    // Enter an infinite loop to keep the CPU from executing garbage memory
     while(1);
 }
-

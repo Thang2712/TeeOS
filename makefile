@@ -25,6 +25,7 @@ objects = obj/loader.o \
 	obj/hardwarecommunication/pci.o \
 	obj/drivers/keyboard.o \
 	obj/drivers/mouse.o \
+	obj/drivers/vga.o	\
 	obj/interruptstubs.o
 
 # .PHONY: tells make that these are not actual files, but commands

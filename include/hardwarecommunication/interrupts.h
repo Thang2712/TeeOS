@@ -106,7 +106,7 @@
     /*
      * Initializes the IDT and configures the PICs to remap IRQs.
      */
-    void init_interrupt_manager(struct InterruptManager* am, uint16_t hardwareInterruptOffset, struct GlobalDescriptorTable* gdt);
+    void init_interrupt_manager(interrupt_manager_t* am, uint16_t hardwareInterruptOffset, struct GlobalDescriptorTable* gdt);
 
     /*
      * Enables hardware interrupts by executing the 'sti' instruction.
