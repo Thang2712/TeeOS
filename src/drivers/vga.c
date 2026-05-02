@@ -162,3 +162,14 @@ void vga_put_pixel_rgb(vga_driver_t* vga, uint32_t x, uint32_t y, uint8_t r, uin
 {
     vga_put_pixel_index(vga, x, y, vga_get_color_index(vga, r, g, b));
 }
+
+/*
+ * @brief Fills a rectangular region by iterating through coordinate.
+ * This implementation reuses vga_put_pixel_rgb to ensure color mapping
+ */
+void vga_fill_rectangle(vga_driver_t* vga, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t r, uint8_t g, uint8_t b)
+{
+    for (uint32_t curr_y = y; curr_y < y + h; curr_y++)
+        for (uint32_t curr_x = x; curr_x < x + w; curr_x++)
+            vga_put_pixel_rgb(vga, curr_x, curr_y, r, g, b);
+}

@@ -7,6 +7,9 @@
 #include <drivers/keyboard.h>
 #include <drivers/mouse.h>
 #include <drivers/vga.h>
+#include <gui/widget.h>
+#include <gui/desktop.h>
+#include <gui/window.h>
 /*
  * VGA test mode constants:
  * Screen is 80 columns wide and 25 rows high.
@@ -17,6 +20,7 @@ struct GlobalDescriptorTable gdt;
 struct InterruptManager interrupt_man;
 struct KeyboardDriver keyboard;
 struct MouseDriver mouse;
+desktop_t desktop;
 
 /*
  * move_cursor: communicates with the VGA hardware to update the
@@ -100,7 +104,7 @@ void my_keydown_handler(char c)
 {
     char buf[] = " "; 
     buf[0] = c;
-    kprintf(buf);
+    kprintf(buf);;
 }
 
 
@@ -181,20 +185,12 @@ void kernelMain(void* multiboot_structure, uint32_t magic)
     // This will clear the kprintf text messages as the hardware switches modes
     if (vga_set_mode(&vga, 320, 200, 8))
     {
-        // Fill the background with the specific dark blue color
-        for(int32_t y = 0; y < 200; y++)
-        {
-            for(int32_t x = 0; x < 320; x++)
-            {
-                // Using the RGB helper: (0, 0, 168) maps to Palette Index 0x01
-                vga_put_pixel_rgb(&vga, x, y, 0x00, 0x00, 0xA8);
-            }
-        }
+        graphics_context_t gc = vga;  // Initialize graphics context with VGA driver
+
+        driver_manager_activate_all(&drvManger); // Re-activate drivers to ensure they are in graphics mode
+        activate_interrupts(); // Ensure interrupts are active before drawing GUI
+        while (1)
+            desktop.base.base.draw((widget_t*)&desktop, &gc);
+        
     }
-
-    kprintf("System ready. Listening for interrupts.................\n");
-    activate_interrupts();
-
-    // Enter an infinite loop to keep the CPU from executing garbage memory
-    while(1);
 }

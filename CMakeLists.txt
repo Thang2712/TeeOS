@@ -16,6 +16,7 @@ set(SOURCE_FILES
     src/drivers/keyboard.c
     src/drivers/mouse.c
     src/drivers/vga.c
+    src/gui/widget.c 
     src/hardwarecommunication/pci.c
     src/hardwarecommunication/port.c
     src/hardwarecommunication/interrupts.c

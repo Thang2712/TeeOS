@@ -68,4 +68,14 @@
 	// @brief Draws a pixel using a specific color index (0-255)
 	void vga_put_pixel_index(vga_driver_t* vga, uint32_t x, uint32_t y, uint8_t colorIndex);
 
+	/*
+	 * @brief Fills a rectangular area with a specific RGB color
+	 * @param x Starting X coordinates (left)
+	 * @param y Starting Y coordinate (top)
+	 * @param w Width of the rectangle
+	 * @param h Height of the rectangle
+	 */
+	void vga_fill_rectangle(vga_driver_t* vga, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t r, uint8_t g, uint8_t b);
+
+
 #endif
