@@ -1,19 +1,25 @@
 #ifndef __MYOS__GUI__DESKTOP_H
 #define __MYOS__GUI__DESKTOP_H
 
-#include <gui/widget.h>
+    #include <gui/widget.h>
 
-/*
- * @brief Desktop widget structure - root container for all GUI elements
- */
-typedef struct 
-{
-    composite_widget_t base;  // Inherit from composite widget
-    int32_t mouse_x; 
-    int32_t mouse_y;
-} desktop_t;
+    /*
+     * @brief Desktop widget structure - root container for all GUI elements
+     */
+    typedef struct 
+    {
+        composite_widget_t base;  // Inherit from composite widget
+        int32_t mouse_x; 
+        int32_t mouse_y;
+    } desktop_t;
 
-// Desktop initialization
-void desktop_init(desktop_t* desktop, int32_t w, int32_t h, uint8_t r, uint8_t g, uint8_t b);
+    // Desktop initialization
+    void desktop_init(desktop_t* desktop, int32_t w, int32_t h, uint8_t r, uint8_t g, uint8_t b);
+
+    void desktop_draw(widget_t* widget, graphics_context_t* gc);
+
+    void desktop_on_mouse_down(desktop_t* desktop, uint8_t button); 
+    void desktop_on_mouse_up(desktop_t* desktop, uint8_t button);
+    void desktop_on_mouse_move(desktop_t* desktop, int32_t xoffset, int32_t yoffset);
 
 #endif

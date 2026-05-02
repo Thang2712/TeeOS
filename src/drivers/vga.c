@@ -118,10 +118,10 @@ bool vga_set_mode(vga_driver_t* vga, uint32_t width, uint32_t height, uint32_t c
  * @brief Determines the segment of memory where the VGA frame buffer resides.
  * Reads the Graphics Controller register 0x06 to check the memory map bits.
  */
-uint8_t* vga_get_frame_buffer_segment(vga_driver_t* vga)
+uint8_t* vga_get_frame_buffer_segment(graphics_context_t* vga)
 {
-    vga->graphicsControllerIndexPort.Write(&vga->graphicsControllerIndexPort, 0x06);
-    uint8_t segmentNumber = vga->graphicsControllerDataPort.Read(&vga->graphicsControllerDataPort) & (3 << 2);
+    ((vga_driver_t*)vga)->graphicsControllerIndexPort.Write(&((vga_driver_t*)vga)->graphicsControllerIndexPort, 0x06);
+    uint8_t segmentNumber = ((vga_driver_t*)vga)->graphicsControllerDataPort.Read(&((vga_driver_t*)vga)->graphicsControllerDataPort) & (3 << 2);
 
     switch(segmentNumber)
     {
@@ -139,37 +139,41 @@ uint8_t* vga_get_frame_buffer_segment(vga_driver_t* vga)
 }
 
 // @brief Plots a pixel on the screen using a palette index
-void vga_put_pixel_index(vga_driver_t* vga, uint32_t x, uint32_t y, uint8_t colorIndex)
+void vga_put_pixel_index(graphics_context_t* vga, int32_t x, int32_t y, uint8_t colorIndex)
 {
-    if(x >= 320 || y >= 200)
+    if(x < 0 || x >= 320 || y < 0 || y >= 200)
         return;
     // Calculation for Mode 13h: segment + (width * y) + x
-    uint8_t* pixelAddress = vga_get_frame_buffer_segment(vga) + 320 * y + x;
+    uint8_t* pixelAddress = vga_get_frame_buffer_segment((graphics_context_t*)vga) + 320 * y + x;
     *pixelAddress = colorIndex;
 }
 
 // @brief Simple RGB-to-Index lookup for basic VGA colors
-uint8_t vga_get_color_index(vga_driver_t* vga, uint8_t r, uint8_t g, uint8_t b)
+uint8_t vga_get_color_index(graphics_context_t* vga, uint8_t r, uint8_t g, uint8_t b)
 {
-    // Example: Dark blue mapping
-    if(r == 0x00 && g == 0x00 && b == 0xA8)
-        return 0x01;
-    return 0x00;
+    if(r == 0x00 && g == 0x00 && b == 0x00) return 0x00; // Black
+    if(r == 0x00 && g == 0x00 && b == 0xA8) return 0x01; // Blue
+    if(r == 0x00 && g == 0xA8 && b == 0x00) return 0x02; // Green
+    if(r == 0xA8 && g == 0x00 && b == 0x00) return 0x04; // Red
+    if(r == 0xFF && g == 0xFF && b == 0xFF) return 0x3F; // White
+    
+    return 0x00; // Default fallback
 }
 
 // @brief Plots a pixel on the screen using RGB values
-void vga_put_pixel_rgb(vga_driver_t* vga, uint32_t x, uint32_t y, uint8_t r, uint8_t g, uint8_t b)
+void vga_put_pixel_rgb(graphics_context_t* vga, int32_t x, int32_t y, uint8_t r, uint8_t g, uint8_t b)
 {
-    vga_put_pixel_index(vga, x, y, vga_get_color_index(vga, r, g, b));
+    vga_put_pixel_index((graphics_context_t*)vga, x, y, vga_get_color_index((graphics_context_t*)vga, r, g, b));
 }
 
 /*
  * @brief Fills a rectangular region by iterating through coordinate.
  * This implementation reuses vga_put_pixel_rgb to ensure color mapping
  */
-void vga_fill_rectangle(vga_driver_t* vga, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t r, uint8_t g, uint8_t b)
+void vga_fill_rectangle(graphics_context_t* vga, int32_t x, int32_t y, uint32_t w, uint32_t h, uint8_t r, uint8_t g, uint8_t b)
 {
-    for (uint32_t curr_y = y; curr_y < y + h; curr_y++)
-        for (uint32_t curr_x = x; curr_x < x + w; curr_x++)
-            vga_put_pixel_rgb(vga, curr_x, curr_y, r, g, b);
+    uint8_t colorIndex = vga_get_color_index((graphics_context_t*)vga, r, g, b);
+    for (int32_t curr_y = y; curr_y < y + (int32_t)h; curr_y++)
+        for (int32_t curr_x = x; curr_x < x + (int32_t)w; curr_x++)
+            vga_put_pixel_index((graphics_context_t*)vga, curr_x, curr_y, colorIndex);
 }

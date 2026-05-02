@@ -6,10 +6,22 @@
     /*
      * @brief Provides a generic abstraction for display hardware.
      */
-    typedef vga_driver_t graphics_context_t;
+    typedef struct graphics_context 
+    {
+        vga_driver_t* vga; 
+
+        int32_t width; 
+        int32_t height;
+    } graphics_context_t;
 
     /*
      * @brief Compatibility alias for Video Graphics Array
      */
-    typedef graphics_context_t video_graphics_array_t;
+    static inline void graphics_context_init(graphics_context_t* gc, vga_driver_t* vga)
+    {
+        gc->vga = vga; 
+        gc->width = 320; 
+        gc->height = 200;
+    }
+
 #endif
