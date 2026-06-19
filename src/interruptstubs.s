@@ -101,6 +101,8 @@ int_bottom:
     pushl %eax                # Push interrupt as 1st parameter
     call HandleInterrupt
 
+    addl $8, %esp
+
     #4. The return value in %eax is the updated stack pointer - use it
     mov %eax, %esp
 

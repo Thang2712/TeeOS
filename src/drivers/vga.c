@@ -1,5 +1,5 @@
 #include <drivers/vga.h>
-
+#include <common/graphicscontext.h>
 
 /*
  * @brief Initializes the VGA driver by mapping internal I/O ports
@@ -19,6 +19,9 @@ void vga_init(vga_driver_t* vga)
     init_port8bit(&vga->attributeControllerReadPort, 0x3C1);
     init_port8bit(&vga->attributeControllerWritePort, 0x3C0);
     init_port8bit(&vga->attributeControllerResetPort, 0x3DA);
+    init_port8bit(&vga->dacAddressReadPort, 0x3C7);
+    init_port8bit(&vga->dacAddressWritePort, 0x3C8);
+    init_port8bit(&vga->dacDataPort, 0x3C9);
 }
 
 /*
@@ -111,7 +114,84 @@ bool vga_set_mode(vga_driver_t* vga, uint32_t width, uint32_t height, uint32_t c
     };
 
     vga_write_registers(vga, g_320x200x256);
+    vga_set_palette(vga);
+    
+    // Create temporary graphics context for clearing
+    graphics_context_t temp_gc;
+    temp_gc.vga = vga;
+    temp_gc.width = width;
+    temp_gc.height = height;
+    vga_clear_screen(&temp_gc, width, height);
+    
     return true;
+}
+
+/*
+ * @brief Initializes the VGA DAC palette with basic colors.
+ * Maps palette indices 0-255 to a standard color gradient.
+ */
+void vga_set_palette(vga_driver_t* vga)
+{
+    // Set palette address write mode to start at index 0
+    vga->dacAddressWritePort.Write(&vga->dacAddressWritePort, 0);
+    
+    // Set up standard VGA 16-color palette with 6-bit RGB values
+    // The DAC expects 6-bit values (0-63), so we convert from 8-bit by right-shifting by 2
+    
+    // Index 0: Black (0, 0, 0)
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    
+    // Index 1: Blue (0, 0, 168) -> (0, 0, 42)
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    
+    // Index 2: Green (0, 168, 0) -> (0, 42, 0)
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    
+    // Index 3: Cyan (0, 168, 168) -> (0, 42, 42)
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    
+    // Index 4: Red (168, 0, 0) -> (42, 0, 0)
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    
+    // Index 5: Magenta (168, 0, 168) -> (42, 0, 42)
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    
+    // Index 6: Yellow (168, 168, 0) -> (42, 42, 0)
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    vga->dacDataPort.Write(&vga->dacDataPort, 0x00);
+    
+    // Index 7: Light Grey (168, 168, 168) -> (42, 42, 42)
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    vga->dacDataPort.Write(&vga->dacDataPort, 42);
+    
+    // Index 255: White (255, 255, 255) -> (63, 63, 63)
+    // Set palette address to 255
+    vga->dacAddressWritePort.Write(&vga->dacAddressWritePort, 255);
+    vga->dacDataPort.Write(&vga->dacDataPort, 63);
+    vga->dacDataPort.Write(&vga->dacDataPort, 63);
+    vga->dacDataPort.Write(&vga->dacDataPort, 63);
+}
+
+/*
+ * @brief Clears the screen by filling it with black (index 0).
+ */
+void vga_clear_screen(graphics_context_t* vga, uint32_t width, uint32_t height)
+{
+    vga_fill_rectangle(vga, 0, 0, width, height, 0x00, 0x00, 0x00);
 }
 
 /*
@@ -151,13 +231,24 @@ void vga_put_pixel_index(graphics_context_t* vga, int32_t x, int32_t y, uint8_t 
 // @brief Simple RGB-to-Index lookup for basic VGA colors
 uint8_t vga_get_color_index(graphics_context_t* vga, uint8_t r, uint8_t g, uint8_t b)
 {
+    // Handle basic colors that are set in the palette
     if(r == 0x00 && g == 0x00 && b == 0x00) return 0x00; // Black
-    if(r == 0x00 && g == 0x00 && b == 0xA8) return 0x01; // Blue
+    if(r == 0x00 && g == 0x00 && b == 0xA8) return 0x01; // Blue (0x2A = 0xA8 >> 2)
     if(r == 0x00 && g == 0xA8 && b == 0x00) return 0x02; // Green
+    if(r == 0x00 && g == 0xA8 && b == 0xA8) return 0x03; // Cyan
     if(r == 0xA8 && g == 0x00 && b == 0x00) return 0x04; // Red
-    if(r == 0xFF && g == 0xFF && b == 0xFF) return 0x3F; // White
+    if(r == 0xA8 && g == 0x00 && b == 0xA8) return 0x05; // Magenta
+    if(r == 0xA8 && g == 0xA8 && b == 0x00) return 0x06; // Yellow
+    if(r == 0xA8 && g == 0xA8 && b == 0xA8) return 0x07; // Light Grey
+    if(r == 0xFF && g == 0xFF && b == 0xFF) return 0xFF; // White (index 255)
     
-    return 0x00; // Default fallback
+    // For other colors, use grayscale mapping
+    // Convert RGB to grayscale and find closest palette entry
+    uint32_t gray = (r + g + b) / 3;
+    uint8_t palette_index = (gray * 255) / 255;
+    if(palette_index < 8) palette_index = 8;
+    
+    return palette_index;
 }
 
 // @brief Plots a pixel on the screen using RGB values

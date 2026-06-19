@@ -109,9 +109,10 @@ uint32_t handle_keyboard_interrupt(struct KeyboardDriver* driver, uint32_t esp)
                 case 0x31: c = 'n'; break;
                 case 0x32: c = 'm'; break;
 
-                // Special Key
-                case 0x1C: c = '\n'; break;
-                case 0x39: c = ' '; break;
+                // Special Keys
+                case 0x0E: c = '\b'; break;  // Backspace
+                case 0x1C: c = '\n'; break;  // Enter
+                case 0x39: c = ' '; break;   // Space
 
                 default:
                     // Unknown scancode - ignore it

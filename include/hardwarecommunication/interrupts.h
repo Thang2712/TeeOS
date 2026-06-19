@@ -3,6 +3,7 @@
 #define __TEEOS__HARDWARECOMMUNICATION__INTERRUPTS_H
 
     #include <gdt.h>
+    #include <multitasking.h>
     #include <common/types.h>
     #include <hardwarecommunication/port.h>
 
@@ -48,6 +49,8 @@
         struct Port8BitSlow picSlaveCommand;        // Command port for Slave PIC (0xA0)
         struct Port8BitSlow picSlaveData;           // Data port for Slave PIC (0xA1)
         struct InterruptHandler* handlers[256];     // Array of handlers for each interrupt (0-255)
+
+        task_manager_t* taskManager;                 // Reference to the Task Manager for context switching
     } interrupt_manager_t;
 
     /*
@@ -106,7 +109,7 @@
     /*
      * Initializes the IDT and configures the PICs to remap IRQs.
      */
-    void init_interrupt_manager(interrupt_manager_t* am, uint16_t hardwareInterruptOffset, struct GlobalDescriptorTable* gdt);
+    void init_interrupt_manager(interrupt_manager_t* am, uint16_t hardwareInterruptOffset, struct GlobalDescriptorTable* gdt, task_manager_t* tm);
 
     /*
      * Enables hardware interrupts by executing the 'sti' instruction.

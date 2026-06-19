@@ -1,12 +1,10 @@
 #include <hardwarecommunication/interrupts.h>
 #include <drivers/keyboard.h>
-#include <drivers/mouse.h>
 #include <drivers/driver.h>
 
 static struct InterruptManager* activeInterruptManager = 0;
 
 extern struct KeyboardDriver keyboard;
-extern struct MouseDriver mouse;
 
 
 // IDT Pointer must be static orWhy is my cursor frozen and unable to click? global to ensure it persists in memory
@@ -44,10 +42,11 @@ void SetInterruptDescriptorTableEntry(uint8_t interrupt, uint16_t CodeSegment, v
 /*
  * Initializes the Interrup Manager, remaps the PIC, and loads the IDT.
  */
-void init_interrupt_manager(struct InterruptManager* am, uint16_t hardwareInterruptOffset, struct GlobalDescriptorTable* gdt)
+void init_interrupt_manager(interrupt_manager_t* am, uint16_t hardwareInterruptOffset, struct GlobalDescriptorTable* gdt, task_manager_t* taskManager)
 {
     activeInterruptManager = am;
     am->hardwareInterruptOffset = hardwareInterruptOffset;
+    am->taskManager = taskManager;
     
     // Initialize all handlers to null
     for (int i = 0; i < 256; i++)
@@ -161,14 +160,13 @@ void deactivate_interrupts()
 uint32_t HandleInterrupt(uint32_t interrupt, uint32_t esp) {
     if (activeInterruptManager->handlers[interrupt] != 0)
         esp = activeInterruptManager->handlers[interrupt]->Handle(activeInterruptManager->handlers[interrupt], esp);
-    else if (interrupt == 0x21)
+    else if (interrupt == activeInterruptManager->hardwareInterruptOffset + 0x01) // Keyboard IRQ (usually IRQ1)
         esp = handle_keyboard_interrupt(&keyboard, esp);
-    else if (interrupt == 0x2C)
-        esp = handle_mouse_interrupt(&mouse, esp);
     else
-        if (interrupt == 0x20)
+        if (interrupt == activeInterruptManager->hardwareInterruptOffset + 0x00)
         {
-            // Timer interrupt (IRQ0) - just acknowledge it
+            if (activeInterruptManager->taskManager != 0)
+                esp = (uint32_t)task_manager_schedule(activeInterruptManager->taskManager, (cpu_state_t*)esp);
         }
         else
         {
@@ -190,9 +188,9 @@ uint32_t HandleInterrupt(uint32_t interrupt, uint32_t esp) {
             }
             kprintf("\n");
         }
-    if (interrupt >= 0x20 && interrupt <= 0x2F)
+    if (interrupt >= activeInterruptManager->hardwareInterruptOffset && interrupt <= activeInterruptManager->hardwareInterruptOffset + 16)
     {
-        if (interrupt >= 0x28)
+        if (interrupt >= activeInterruptManager->hardwareInterruptOffset + 8)
             activeInterruptManager->picSlaveCommand.Write(&(activeInterruptManager->picSlaveCommand), 0x20);
         activeInterruptManager->picMasterCommand.Write(&(activeInterruptManager->picMasterCommand), 0x20);
     }
