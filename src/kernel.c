@@ -58,6 +58,30 @@ void move_cursor(int x, int y)
 }
 
 /*
+ * scroll_screen: Scrolls the screen up by one line when bottom is reached
+ */
+void scroll_screen()
+{
+    static uint16_t* VideoMemory = (uint16_t*)0xb8000;
+    
+    // Copy each line up by one
+    for(int i = 0; i < 24 * 80; i++)
+    {
+        VideoMemory[i] = VideoMemory[i + 80];
+    }
+    
+    // Clear the bottom line
+    for(int i = 24 * 80; i < 25 * 80; i++)
+    {
+        VideoMemory[i] = 0x0720; // Space with light grey on black
+    }
+    
+    // Move cursor to start of last line
+    cursor_Y = 24;
+    cursor_X = 0;
+}
+
+/*
  * kprintf: Kernel Print Function. 
  * Directly writes strings to VGA video memory (0xB8000).
  */
@@ -71,7 +95,19 @@ void kprintf(char* str)
         {
             cursor_X = 0;
             cursor_Y++;
+            
+            // Scroll if we've gone past the bottom
+            if (cursor_Y >= 25)
+            {
+                scroll_screen();
+            }
             continue;
+        }
+
+        // Scroll if we're at or past the bottom
+        if (cursor_Y >= 25)
+        {
+            scroll_screen();
         }
 
         int location = cursor_Y * 80 + cursor_X;
@@ -84,6 +120,12 @@ void kprintf(char* str)
         {
             cursor_X = 0;
             cursor_Y++;
+            
+            // Scroll if we've gone to the next line past bottom
+            if (cursor_Y >= 25)
+            {
+                scroll_screen();
+            }
         }
     }
     move_cursor(cursor_X, cursor_Y);
