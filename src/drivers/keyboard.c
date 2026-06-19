@@ -113,6 +113,10 @@ uint32_t handle_keyboard_interrupt(struct KeyboardDriver* driver, uint32_t esp)
                 case 0x0E: c = '\b'; break;  // Backspace
                 case 0x1C: c = '\n'; break;  // Enter
                 case 0x39: c = ' '; break;   // Space
+                case 0x4B: c = '\x01'; break;  // Left Arrow (0x01 = custom code)
+                case 0x4D: c = '\x02'; break;  // Right Arrow (0x02 = custom code)
+                case 0x48: c = '\x03'; break;  // Up Arrow (0x03 = custom code)
+                case 0x50: c = '\x04'; break;  // Down Arrow (0x04 = custom code)
 
                 default:
                     // Unknown scancode - ignore it

@@ -27,10 +27,12 @@ keyboard_layout_manager_t layout_manager;
 
 // Command-line interface variables
 static char command_buffer[MAX_CMD_LENGTH];
-static int cmd_index = 0;
+static int cmd_index = 0;           // Current length of command
+static int cursor_pos = 0;          // Current cursor position in command
 static char command_history[MAX_HISTORY][MAX_CMD_LENGTH];
 static int history_index = 0;
 static volatile int newline_pressed = 0;
+static int prompt_start_x = 0;      // X position where prompt starts
 
 // Forward declarations
 void cli_keydown_handler(char c);
@@ -235,6 +237,126 @@ void printfHex(uint8_t key)
 void print_prompt()
 {
     kprintf("teeos> ");
+    prompt_start_x = cursor_X;  // Save where prompt ends and input begins
+    cursor_pos = 0;
+    cmd_index = 0;
+}
+
+/*
+ * redraw_command_line: Redraw the entire command line with block cursor
+ */
+void redraw_command_line()
+{
+    static uint16_t* VideoMemory = (uint16_t*)0xb8000;
+    
+    // Calculate screen position for command start
+    int base_pos = cursor_Y * 80 + prompt_start_x;
+    
+    // Clear the line from prompt end to end
+    for(int i = prompt_start_x; i < 80; i++)
+    {
+        VideoMemory[cursor_Y * 80 + i] = 0x0720;  // Space
+    }
+    
+    // Draw command buffer with cursor
+    for(int i = 0; i < cmd_index; i++)
+    {
+        uint8_t ch = (uint8_t)command_buffer[i];
+        uint16_t attr;
+        
+        if(i == cursor_pos)
+        {
+            // Block cursor - inverse video (black text on white)
+            attr = 0xF0;  // White background, black text
+        }
+        else
+        {
+            // Normal text
+            attr = 0x07;  // Light grey on black
+        }
+        
+        int screen_pos = base_pos + i;
+        VideoMemory[screen_pos] = (attr << 8) | ch;
+    }
+    
+    // Draw cursor if at end of text
+    if(cursor_pos == cmd_index)
+    {
+        int screen_pos = base_pos + cursor_pos;
+        // Block cursor at end (show as space with inverse video)
+        VideoMemory[screen_pos] = 0xF020;  // Space with inverse video
+    }
+    
+    // Move actual cursor to after the visual cursor
+    move_cursor(prompt_start_x + cursor_pos + 1, cursor_Y);
+}
+
+/*
+ * insert_char_at_cursor: Insert a character at cursor position
+ */
+void insert_char_at_cursor(char c)
+{
+    if(cmd_index >= MAX_CMD_LENGTH - 1)
+        return;  // Buffer full
+    
+    // Shift characters to the right to make room
+    for(int i = cmd_index; i > cursor_pos; i--)
+    {
+        command_buffer[i] = command_buffer[i - 1];
+    }
+    
+    // Insert character at cursor position
+    command_buffer[cursor_pos] = c;
+    cmd_index++;
+    cursor_pos++;
+    
+    // Redraw the line
+    redraw_command_line();
+}
+
+/*
+ * delete_char_at_cursor: Delete character at cursor position (backspace)
+ */
+void delete_char_at_cursor()
+{
+    if(cursor_pos <= 0)
+        return;  // At beginning
+    
+    cursor_pos--;
+    
+    // Shift characters left to remove deleted character
+    for(int i = cursor_pos; i < cmd_index - 1; i++)
+    {
+        command_buffer[i] = command_buffer[i + 1];
+    }
+    cmd_index--;
+    
+    // Redraw the line
+    redraw_command_line();
+}
+
+/*
+ * move_cursor_left: Move cursor one position to the left
+ */
+void move_cursor_left()
+{
+    if(cursor_pos > 0)
+    {
+        cursor_pos--;
+        redraw_command_line();
+    }
+}
+
+/*
+ * move_cursor_right: Move cursor one position to the right
+ */
+void move_cursor_right()
+{
+    if(cursor_pos < cmd_index)
+    {
+        cursor_pos++;
+        redraw_command_line();
+    }
 }
 /*
  * cli_keyup_handler: Handle key release (not used for CLI)
@@ -245,7 +367,7 @@ void cli_keyup_handler(char c)
 }
 
 /*
- * cli_keydown_handler: Keyboard event handler for command-line interface
+ * cli_keydown_handler: Keyboard event handler for command-line interface with cursor support
  */
 void cli_keydown_handler(char c)
 {
@@ -269,37 +391,29 @@ void cli_keydown_handler(char c)
         }
         
         execute_command(command_buffer);
+        cursor_pos = 0;
         cmd_index = 0;
         print_prompt();
     }
     else if(c == '\b' || c == 0x08)
     {
-        // Backspace
-        if(cmd_index > 0)
-        {
-            cmd_index--;
-            // Move cursor back and erase
-            if(cursor_X > 7)
-            {
-                cursor_X--;
-                static uint16_t* VideoMemory = (uint16_t*)0xb8000;
-                int location = cursor_Y * 80 + cursor_X;
-                VideoMemory[location] = 0x0720;
-                move_cursor(cursor_X, cursor_Y);
-            }
-        }
+        // Backspace - delete character before cursor
+        delete_char_at_cursor();
+    }
+    else if(c == '\x01')
+    {
+        // Left arrow - move cursor left
+        move_cursor_left();
+    }
+    else if(c == '\x02')
+    {
+        // Right arrow - move cursor right
+        move_cursor_right();
     }
     else if(c >= 32 && c < 127)
     {
-        // Printable character
-        if(cmd_index < MAX_CMD_LENGTH - 1)
-        {
-            command_buffer[cmd_index] = c;
-            cmd_index++;
-            char buf[] = " ";
-            buf[0] = c;
-            kprintf(buf);
-        }
+        // Printable character - insert at cursor position
+        insert_char_at_cursor(c);
     }
 }
 
