@@ -6,7 +6,10 @@
 #include <hardwarecommunication/pci.h>
 #include <drivers/driver.h>
 #include <drivers/keyboard.h>
+#include <drivers/keyboard_layout.h>
+#include <drivers/keyboard_layout_display.h>
 #include <drivers/vga.h>
+#include <common/text_box.h>
 
 #define MAX_CMD_LENGTH 256
 #define MAX_HISTORY 10
@@ -20,6 +23,7 @@ struct InterruptManager interrupt_man;
 struct KeyboardDriver keyboard;
 task_manager_t taskManager;
 task_t task1, task2;
+keyboard_layout_manager_t layout_manager;
 
 // Command-line interface variables
 static char command_buffer[MAX_CMD_LENGTH];
@@ -162,6 +166,7 @@ void execute_command(char* cmd)
         kprintf("  clear    - Clear the screen\n");
         kprintf("  echo     - Echo text back to console\n");
         kprintf("  sys      - Show system information\n");
+        kprintf("  layout   - Display active keyboard layout\n");
         kprintf("  exit     - Halt the system\n");
     }
     else if(cmd[0] == 'c' && cmd[1] == 'l' && cmd[2] == 'e' && cmd[3] == 'a' && cmd[4] == 'r')
@@ -192,6 +197,11 @@ void execute_command(char* cmd)
         kprintf("Mode: Text (80x25)\n");
         kprintf("CPU: x86 32-bit\n");
         kprintf("Status: Running\n");
+    }
+    else if(cmd[0] == 'l' && cmd[1] == 'a' && cmd[2] == 'y' && cmd[3] == 'o' && cmd[4] == 'u' && cmd[5] == 't')
+    {
+        kprintf("\n");
+        display_keyboard_layout_centered(&layout_manager);
     }
     else if(cmd[0] == 'e' && cmd[1] == 'x' && cmd[2] == 'i' && cmd[3] == 't')
     {
@@ -302,6 +312,9 @@ void kernelMain(void* multiboot_structure, uint32_t magic)
     // 1. Initialize GDT and Interrupts
     init_gdt(&gdt);
     clear_screen();
+    
+    // Initialize keyboard layout manager
+    keyboard_layout_manager_init(&layout_manager);
     
     kprintf("===============================================\n");
     kprintf("      Welcome to TeeOS Command Line OS v1.0    \n");

@@ -12,13 +12,17 @@ set(SOURCE_FILES
     src/loader.s
     src/kernel.c
     src/gdt.c
+    src/multitasking.c
     src/drivers/driver.c
     src/drivers/keyboard.c
+    src/drivers/keyboard_layout.c
+    src/drivers/keyboard_layout_display.c
     src/drivers/vga.c
     src/hardwarecommunication/pci.c
     src/hardwarecommunication/port.c
     src/hardwarecommunication/interrupts.c
     src/interruptstubs.s
+    src/common/text_box.c
 )
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32 -ffreestanding -fno-stack-protector -fno-pie -fno-builtin -nostdlib -D__i386__")

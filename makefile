@@ -20,12 +20,15 @@ objects = obj/loader.o \
 	obj/kernel.o \
 	obj/gdt.o \
 	obj/drivers/driver.o \
+	obj/drivers/keyboard.o \
+	obj/drivers/keyboard_layout.o \
+	obj/drivers/keyboard_layout_display.o \
+	obj/drivers/vga.o \
 	obj/hardwarecommunication/port.o \
 	obj/hardwarecommunication/interrupts.o \
-	obj/multitasking.o \
 	obj/hardwarecommunication/pci.o \
-	obj/drivers/keyboard.o \
-	obj/drivers/vga.o \
+	obj/multitasking.o \
+	obj/common/text_box.o \
 	obj/interruptstubs.o
 
 # .PHONY: tells make that these are not actual files, but commands
